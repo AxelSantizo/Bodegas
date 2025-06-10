@@ -1,0 +1,132 @@
+cd ..
+npm init -y
+npm install -D concurrently
+npm install -g electron-builder
+
+
+Modifica package.json
+{
+  "name": "logistica",
+  "version": "1.0.0",
+  "description": "Logistica",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "concurrently \"npm run frontend\" \"npm run electron\"",
+    "frontend": "cd Frontend && npm run dev",
+    "electron": "wait-on http://localhost:3000 && electron .",
+    "build": "cd Frontend && npm run build && electron-builder"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^29.4.6",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.logistica.app",
+    "productName": "LogisticaApp",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "Frontend/dist/**/*",
+      "main.js"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "mac": {
+      "target": "dmg"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  }
+}
+
+
+
+
+// main.js
+const { app, BrowserWindow } = require("electron");
+const path = require("path");
+const { exec } = require("child_process");
+
+let mainWindow;
+const isDev = !app.isPackaged; // Verifica si la app está en modo desarrollo
+
+const createWindow = () => {
+  mainWindow = new BrowserWindow({
+    width: 1200,
+    height: 800,
+    webPreferences: {
+      nodeIntegration: true,
+    },
+  });
+
+  if (isDev) {
+    // 🔹 En modo desarrollo, inicia el servidor Vite antes de cargar Electron
+    const frontendPath = path.join(__dirname, "Frontend");
+    console.log("Iniciando el frontend con Vite...");
+
+    const devProcess = exec(`cd "${frontendPath}" && npm run dev`);
+
+    devProcess.stdout.on("data", (data) => {
+      console.log(data.toString());
+    });
+
+    devProcess.stderr.on("data", (data) => {
+      console.error(data.toString());
+    });
+
+    // Espera unos segundos para que Vite se inicie antes de cargar la URL
+    setTimeout(() => {
+      mainWindow.loadURL("http://localhost:3000").catch((err) => {
+        console.error("❌ Error cargando la URL en modo desarrollo:", err);
+      });
+    }, 5000);
+  } else {
+    // 🔹 En producción, carga el archivo HTML generado en `dist/`
+    const prodURL = `file://${path.join(__dirname, "Frontend", "dist", "index.html")}`;
+    mainWindow.loadURL(prodURL).catch((err) => {
+      console.error("❌ Error cargando la URL en modo producción:", err);
+    });
+  }
+
+  mainWindow.on("closed", () => {
+    mainWindow = null;
+  });
+};
+
+app.whenReady().then(() => {
+  createWindow();
+
+  app.on("activate", () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
+    }
+  });
+});
+
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
+    app.quit();
+  }
+});
+
+
+
+Eliminar todas las carpetas dist
+rm -rf Frontend/dist
+
+
+Construir el frontend
+cd Frontend
+npm run build
+
+
+Generar la aplicacion 
+cd ..
+npx electron-builder --win
