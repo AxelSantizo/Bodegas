@@ -24,6 +24,7 @@
   "author": "AxelSantizo",
   "license": "ISC",
   "devDependencies": {
+    "@types/react-dnd-html5-backend": "^3.0.2",
     "concurrently": "^8.2.2",
     "electron": "^29.4.6",
     "electron-builder": "^25.1.8",
